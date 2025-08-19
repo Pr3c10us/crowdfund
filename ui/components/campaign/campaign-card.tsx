@@ -198,20 +198,20 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
       </CardContent>
 
       <CardFooter className="pt-0 space-y-2">
-        <div className="grid grid-cols-2 gap-2 w-full">
-          <Button asChild variant="outline" className="group-hover:bg-primary/5 transition-colors">
+        <div className="flex gap-2 w-full">
+          <Button asChild variant="outline" className="group-hover:bg-primary/5 transition-colors w-full">
             <Link href={`/${campaign.id}`}>
               View Details
             </Link>
           </Button>
-          <Button
+          {/* <Button
             onClick={() => setShowDonateDialog(true)}
             className="group-hover:bg-primary/90 transition-colors"
             disabled={campaign.status !== 'active'}
           >
             <Heart className="w-4 h-4 mr-1" />
             Donate
-          </Button>
+          </Button> */}
         </div>
       </CardFooter>
 

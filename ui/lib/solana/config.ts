@@ -38,7 +38,7 @@ export const createConnection = (network: WalletAdapterNetwork = DEFAULT_NETWORK
 export const connection = createConnection(NETWORK);
 
 // Program ID for the crowdfunding smart contract
-export const CROWDFUNDING_PROGRAM_ID = new PublicKey('6jzv4ApJTAWKWu8puDgMpzwV2pMGLp1nvDUoYrpMUjVM');
+export const CROWDFUNDING_PROGRAM_ID = new PublicKey('21eoeoxSMhCR4vHwf7aAiZLCyVSHsmLrCZMPTBS7MM9U');
 
 // Constants
 export const LAMPORTS_PER_SOL = 1000000000;

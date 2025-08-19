@@ -219,6 +219,7 @@ export const convertMilestonesToProgram = (milestones: Array<{
     description: milestone.description,
     releaseTs: new BN(0), // Will be set when released
     released: false,
+    isLast: false
   }));
 };
 

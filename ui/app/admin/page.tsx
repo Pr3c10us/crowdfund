@@ -96,7 +96,13 @@ export default function AdminPage() {
           signAllTransactions: async (txs: any) => Promise.all(txs.map((tx: any) => signTransaction(tx))),
           payer: publicKey
         } as any);
-        setSystemConfig(config);
+
+        if (config) {
+          setSystemConfig({
+            authority: config.authority,
+            disputeSeconds: config.disputeSeconds.toNumber()
+          });
+        }
       }
     } catch (error) {
       console.error('Error loading system config:', error);

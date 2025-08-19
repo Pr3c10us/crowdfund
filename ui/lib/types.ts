@@ -7,6 +7,7 @@ export interface Milestone {
   description: string;
   releaseTs: BN;
   released: boolean;
+  isLast: boolean;
 }
 
 // Campaign interface matching IDL structure

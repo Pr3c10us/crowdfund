@@ -22,7 +22,8 @@ import {
   getMilestoneStatus,
   calculateTotalReleased,
   calculateAvailableToRelease,
-  MilestoneStatus
+  MilestoneStatus,
+  getEffectiveMilestoneAmount
 } from '@/lib/solana/milestone-utils';
 import { convertLamportsToSol } from '@/lib/solana/donation-utils';
 
@@ -30,6 +31,7 @@ interface MilestoneTimelineProps {
   campaign: CampaignData;
   isCreator?: boolean;
   onMilestoneRelease?: (signature: string, milestoneIndex: number) => void;
+  onMilestoneRefresh?: (refreshResult: any) => void;
   showCards?: boolean;
   disputeWindowSeconds: number;
 }
@@ -38,6 +40,7 @@ export const MilestoneTimeline: React.FC<MilestoneTimelineProps> = ({
   campaign,
   isCreator = false,
   onMilestoneRelease,
+  onMilestoneRefresh,
   showCards = true,
   disputeWindowSeconds
 }) => {
@@ -220,7 +223,14 @@ export const MilestoneTimeline: React.FC<MilestoneTimelineProps> = ({
               );
 
               const isActive = status === 'available';
-              const milestoneAmountSol = convertLamportsToSol(milestone.amount);
+              const effectiveAmount = getEffectiveMilestoneAmount(
+                milestone,
+                index,
+                milestones,
+                campaign.totalDonated
+              );
+              const milestoneAmountSol = convertLamportsToSol(effectiveAmount);
+              const isLastMilestone = milestone.isLast;
 
               return (
                 <div key={index} className="relative">
@@ -261,7 +271,12 @@ export const MilestoneTimeline: React.FC<MilestoneTimelineProps> = ({
                         </div>
 
                         <p className="text-muted-foreground text-sm mb-4 leading-relaxed">
-                          {milestone.description || `Milestone ${index + 1} - Release ${milestoneAmountSol.toFixed(2)} SOL when conditions are met`}
+                          {milestone.description ||
+                            (isLastMilestone
+                              ? `Final milestone - Release remaining donated funds (${milestoneAmountSol.toFixed(2)} SOL)`
+                              : `Milestone ${index + 1} - Release ${milestoneAmountSol.toFixed(2)} SOL when conditions are met`
+                            )
+                          }
                         </p>
 
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -311,6 +326,7 @@ export const MilestoneTimeline: React.FC<MilestoneTimelineProps> = ({
                 milestoneIndex={index}
                 campaign={campaign}
                 onReleaseSuccess={onMilestoneRelease}
+                onMilestoneRefresh={onMilestoneRefresh}
                 isCreator={isCreator}
                 disputeWindowSeconds={disputeWindowSeconds}
               />

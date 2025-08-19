@@ -82,6 +82,7 @@ import { DonateParams } from '@/lib/types';
 import { BN } from '@coral-xyz/anchor';
 import { CampaignLoading } from '@/components/campaign/campaign-loading';
 import { getSystemConfig } from '@/lib/solana/admin-utils';
+import { areAllMilestonesReleased } from '@/lib/solana/milestone-utils';
 
 export default function CampaignDetailPage() {
   const params = useParams();
@@ -171,6 +172,14 @@ export default function CampaignDetailPage() {
   const targetAmountSol = convertLamportsToSol(campaign.targetLamports);
   const progressPercentage = campaign.progress;
 
+  // Check if all milestones have been released
+  const allMilestonesReleased = campaign.milestones && campaign.milestones.length > 0
+    ? areAllMilestonesReleased(campaign.milestones)
+    : false;
+
+  // Determine if donations should be disabled
+  const donationsDisabled = campaign.status !== 'active' || allMilestonesReleased;
+
   const formatTimeRemaining = (seconds: number): string => {
     if (seconds <= 0) return 'Campaign ended';
 
@@ -210,6 +219,44 @@ export default function CampaignDetailPage() {
         console.error('Failed to refresh campaign data:', error);
       }
     }, 2000);
+  };
+
+  const onMilestoneRelease = (signature: string, milestoneIndex: number) => {
+    // Refresh campaign data after successful milestone release
+    setTimeout(async () => {
+      try {
+        const campaignService = getCampaignDataService(connection);
+        const updatedCampaign = await campaignService.fetchCampaign(new PublicKey(campaign!.id));
+        if (updatedCampaign) {
+          setCampaign(updatedCampaign);
+          console.log(`Campaign data refreshed after milestone ${milestoneIndex + 1} release`);
+        }
+      } catch (error) {
+        console.error('Failed to refresh campaign data after milestone release:', error);
+      }
+    }, 2000);
+  };
+
+  const onMilestoneRefresh = (refreshResult: any) => {
+    // Handle milestone refresh results
+    console.log('Milestone refresh result:', refreshResult);
+
+    // If there are newly available milestones or status changes, refresh campaign data
+    if (refreshResult.newlyAvailable?.length > 0 ||
+      refreshResult.refreshedMilestones?.some((m: any) => m.statusChanged)) {
+      setTimeout(async () => {
+        try {
+          const campaignService = getCampaignDataService(connection);
+          const updatedCampaign = await campaignService.fetchCampaign(new PublicKey(campaign!.id));
+          if (updatedCampaign) {
+            setCampaign(updatedCampaign);
+            console.log('Campaign data refreshed due to milestone status changes');
+          }
+        } catch (error) {
+          console.error('Failed to refresh campaign data after milestone refresh:', error);
+        }
+      }, 1000);
+    }
   };
 
   const handleShare = (platform?: string) => {
@@ -417,6 +464,8 @@ export default function CampaignDetailPage() {
                     isCreator={publicKey?.toString() === campaign.creator.toString()}
                     showCards={true}
                     disputeWindowSeconds={disputeWindow}
+                    onMilestoneRelease={onMilestoneRelease}
+                    onMilestoneRefresh={onMilestoneRefresh}
                   />
                 ) : (
                   <Card>
@@ -473,15 +522,18 @@ export default function CampaignDetailPage() {
                     onClick={() => setShowDonateDialog(true)}
                     className="w-full"
                     size="lg"
-                    disabled={campaign.status !== 'active'}
+                    disabled={donationsDisabled}
                   >
                     <Heart className="mr-2 h-4 w-4" />
-                    Donate Now
+                    {allMilestonesReleased ? 'Campaign Complete' : 'Donate Now'}
                   </Button>
 
-                  {campaign.status !== 'active' && (
+                  {donationsDisabled && (
                     <div className="text-xs text-muted-foreground text-center">
-                      This campaign is no longer accepting donations
+                      {allMilestonesReleased
+                        ? 'All milestones have been released - donations are no longer accepted'
+                        : 'This campaign is no longer accepting donations'
+                      }
                     </div>
                   )}
                 </div>

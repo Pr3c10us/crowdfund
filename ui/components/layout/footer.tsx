@@ -22,7 +22,7 @@ export const Footer: React.FC = () => {
               <span className="text-xl font-bold">SolFund</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Decentralized crowdfunding platform built on Solana blockchain. 
+              Decentralized crowdfunding platform built on Solana blockchain.
               Transparent, secure, and community-driven fundraising.
             </p>
             <div className="flex space-x-2">
@@ -46,38 +46,38 @@ export const Footer: React.FC = () => {
               </Button>
             </div>
           </div>
-          
+
           {/* Platform Links */}
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Platform</h4>
             <ul className="space-y-3">
               <li>
-                <Link 
-                  href="/" 
+                <Link
+                  href="/"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Browse Campaigns
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/campaigns/create" 
+                <Link
+                  href="/create"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Create Campaign
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/dashboard" 
+                <Link
+                  href="/dashboard"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Dashboard
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/categories" 
+                <Link
+                  href="/categories"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Categories
@@ -85,14 +85,14 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
           </div>
-          
+
           {/* Resources */}
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Resources</h4>
             <ul className="space-y-3">
               <li>
-                <Link 
-                  href="/docs" 
+                <Link
+                  href="/docs"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center"
                 >
                   Documentation
@@ -100,24 +100,24 @@ export const Footer: React.FC = () => {
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/help" 
+                <Link
+                  href="/help"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Help Center
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/api" 
+                <Link
+                  href="/api"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   API Reference
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/security" 
+                <Link
+                  href="/security"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Security
@@ -125,38 +125,38 @@ export const Footer: React.FC = () => {
               </li>
             </ul>
           </div>
-          
+
           {/* Legal & Support */}
           <div className="space-y-4">
             <h4 className="font-semibold text-foreground">Legal</h4>
             <ul className="space-y-3">
               <li>
-                <Link 
-                  href="/terms" 
+                <Link
+                  href="/terms"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Terms of Service
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/privacy" 
+                <Link
+                  href="/privacy"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Privacy Policy
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/cookies" 
+                <Link
+                  href="/cookies"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Cookie Policy
                 </Link>
               </li>
               <li>
-                <Link 
-                  href="/contact" 
+                <Link
+                  href="/contact"
                   className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                 >
                   Contact Us
@@ -165,20 +165,20 @@ export const Footer: React.FC = () => {
             </ul>
           </div>
         </div>
-        
+
         <Separator className="my-8" />
-        
+
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
             <p>&copy; {currentYear} SolFund. All rights reserved.</p>
             <span className="hidden sm:inline">•</span>
             <p className="hidden sm:inline">Built on Solana</p>
           </div>
-          
+
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <Link 
-              href="https://solana.com" 
-              target="_blank" 
+            <Link
+              href="https://solana.com"
+              target="_blank"
               rel="noopener noreferrer"
               className="hover:text-foreground transition-colors inline-flex items-center"
             >

@@ -3,6 +3,7 @@ import { AnchorProvider, Program, BN, Wallet } from '@coral-xyz/anchor';
 import { IDL } from './idl';
 import { CROWDFUNDING_PROGRAM_ID } from './config';
 import { Milestone } from '@/lib/types';
+import { ca } from 'zod/v4/locales';
 
 // Milestone status types
 export type MilestoneStatus = 'pending' | 'available' | 'released' | 'disputed';
@@ -66,7 +67,7 @@ export const getMilestoneStatus = (
     //   lastReleasedTimestamp = lastReleaseTimestamp.toNumber();
     // }
 
-    disputeEndTimestamp = lastReleaseTimestamp.toNumber() + disputeWindowSeconds;
+    disputeEndTimestamp = lastReleaseTimestamp?.toNumber() || 0 + disputeWindowSeconds;
   }
 
   // Check if dispute window is still open
@@ -113,7 +114,7 @@ export const getTimeUntilRelease = (
     //   lastReleasedTimestamp = lastReleaseTimestamp?.toNumber() || 0;
     // }
 
-    disputeEndTimestamp = lastReleaseTimestamp.toNumber() + disputeWindowSeconds;
+    disputeEndTimestamp = lastReleaseTimestamp?.toNumber() || 0 + disputeWindowSeconds;
   }
 
   const timeRemaining = disputeEndTimestamp - currentTimestamp;
@@ -137,6 +138,52 @@ export const formatTimeRemaining = (seconds: number): string => {
     return `${minutes}m remaining`;
   }
 };
+
+interface TimeFormatOptions {
+  includeSeconds?: boolean;
+  compact?: boolean;
+  showZeroValues?: boolean;
+}
+
+function secondsToReadableTime(
+  seconds: number,
+  options: TimeFormatOptions = {}
+): string {
+  const {
+    includeSeconds = true,
+    compact = false,
+    showZeroValues = false
+  } = options;
+
+  if (seconds < 0) {
+    throw new Error('Seconds must be non-negative');
+  }
+
+  const days = Math.floor(seconds / 86400);
+  const hours = Math.floor((seconds % 86400) / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const parts: string[] = [];
+
+  if (days > 0 || showZeroValues) {
+    parts.push(compact ? `${days}d` : `${days} day${days !== 1 ? 's' : ''}`);
+  }
+
+  if (hours > 0 || (showZeroValues && days > 0)) {
+    parts.push(compact ? `${hours}h` : `${hours} hour${hours !== 1 ? 's' : ''}`);
+  }
+
+  if (minutes > 0 || (showZeroValues && (hours > 0 || days > 0))) {
+    parts.push(compact ? `${minutes}m` : `${minutes} minute${minutes !== 1 ? 's' : ''}`);
+  }
+
+  if (includeSeconds && (secs > 0 || parts.length === 0 || showZeroValues)) {
+    parts.push(compact ? `${secs}s` : `${secs} second${secs !== 1 ? 's' : ''}`);
+  }
+
+  return parts.join(compact ? ' ' : ', ');
+}
 
 // Validate milestone release eligibility
 export const validateMilestoneRelease = (
@@ -202,7 +249,7 @@ export const validateMilestoneRelease = (
     console.log({ remainingDays, currentTimestamp, disputeEndTimestamp, remainingTime, validateMilestoneRelease: true });
     return {
       isValid: false,
-      error: `Must wait ${remainingDays} more day(s) from ${milestoneIndex === 0 ? 'campaign start' : 'last milestone release'}`
+      error: `Must wait ${secondsToReadableTime(remainingTime, { includeSeconds: remainingTime < 60 ? true : false })} to realease funds`
     };
   }
 
@@ -321,4 +368,61 @@ export const calculateAvailableToRelease = (
   });
 
   return availableAmount;
+};
+
+// Calculate the amount for the last milestone (remaining donated amount)
+export const calculateLastMilestoneAmount = (
+  milestones: Milestone[],
+  campaignTotalDonated: BN
+): BN => {
+  if (milestones.length === 0) return new BN(0);
+
+  // Calculate total amount from all previous milestones
+  const totalPreviousMilestones = milestones.slice(0, -1).reduce((total, milestone) => {
+    return total.add(milestone.amount);
+  }, new BN(0));
+  if (campaignTotalDonated.lte(totalPreviousMilestones)) {
+    return milestones[milestones.length - 1].amount;
+  }
+  // Last milestone gets the remaining donated amount
+  const remainingAmount = campaignTotalDonated.sub(totalPreviousMilestones);
+  return remainingAmount.gt(new BN(0)) ? remainingAmount : new BN(0);
+};
+
+// Check if all milestones have been released
+export const areAllMilestonesReleased = (milestones: Milestone[]): boolean => {
+  if (milestones.length === 0) return false;
+  return milestones.every(milestone => milestone.released);
+};
+
+// Get the effective milestone amount (use calculated amount for last milestone)
+export const getEffectiveMilestoneAmount = (
+  milestone: Milestone,
+  milestoneIndex: number,
+  milestones: Milestone[],
+  campaignTotalDonated: BN
+): BN => {
+  const isLastMilestone = milestone.isLast;
+  console.log({ milestoneIndex, milestones, campaignTotalDonated, isLastMilestone, milestoneLength: milestones.length, no: 1 });
+
+  if (isLastMilestone) {
+    console.log({ milestoneIndex, milestones, campaignTotalDonated, isLastMilestone, milestoneLength: milestones.length, no: 2 });
+
+    const calculatedAmount = calculateLastMilestoneAmount(milestones, campaignTotalDonated);
+
+    // Debug logging
+    console.log('Effective milestone amount calculation:', {
+      milestoneIndex,
+      isLastMilestone,
+      originalAmount: milestone.amount.toString(),
+      calculatedAmount: calculatedAmount.toString(),
+      totalDonated: campaignTotalDonated.toString(),
+      totalMilestones: milestones.length,
+      previousMilestonesSum: milestones.slice(0, -1).reduce((total, m) => total.add(m.amount), new BN(0)).toString()
+    });
+
+    return calculatedAmount;
+  }
+
+  return milestone.amount;
 };

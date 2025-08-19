@@ -1,8 +1,8 @@
 use anchor_lang::prelude::*;
 
-declare_id!("6jzv4ApJTAWKWu8puDgMpzwV2pMGLp1nvDUoYrpMUjVM");
+declare_id!("21eoeoxSMhCR4vHwf7aAiZLCyVSHsmLrCZMPTBS7MM9U");
 
-const MAX_MILESTONES: usize = 5;
+const MAX_MILESTONES: usize = 3;
 // const AUTHORITHY: Pubkey = pubkey!("3AwdYohZksUuatMoLmK8CGo7zuNJsEPRPCREVvMNVw2f");
 // const DISPUTE_SECONDS: i64 = 3 * 24 * 60 * 60; // 3 days
 
@@ -16,6 +16,8 @@ pub enum CrowdfundError {
     InDispute,
     #[msg("Milestone already released or index out of bounds")]
     BadMilestone,
+    #[msg("All milestone have been completed")]
+    MilestoneComplete,
     #[msg("Target not reached")]
     TargetNotReached,
     #[msg("Nothing to refund")]
@@ -26,6 +28,8 @@ pub enum CrowdfundError {
     DisputeWindowOpen,
     #[msg("Milestone already released")]
     AlreadyReleased,
+    #[msg("previous milestone has not been realesed")]
+    MilestoneNotReady,
     #[msg("Unauthorized to release funds")]
     UnAuthorized,
     #[msg("The funds in the campaign has been locked")]
@@ -105,6 +109,11 @@ pub mod crowdfunding {
         campaign.locked = false;
         campaign.milestone_count = milestone_amounts.len() as u8;
         for i in 0..milestone_amounts.len() {
+            let last_milestone_index = milestone_amounts.len() - 1;
+            let mut is_last = false;
+            if i as usize == last_milestone_index {
+                is_last = true;
+            };
             let desc: String = milestone_description[i].to_string();
             campaign.milestones[i] = Milestone {
                 amount: milestone_amounts[i],
@@ -112,6 +121,7 @@ pub mod crowdfunding {
                 release_ts: clock.unix_timestamp
                     + (i as i64 * duration_seconds / campaign.milestone_count as i64),
                 released: false,
+                is_last,
             };
         }
         campaign.last_release_ts = 0;
@@ -127,6 +137,14 @@ pub mod crowdfunding {
         let donor = &ctx.accounts.donor;
         let vault = &ctx.accounts.vault;
         let system_program = &ctx.accounts.system_program;
+        let last_milestone: Option<&Milestone> =
+            ctx.accounts.campaign.milestones.iter().find(|f| f.is_last);
+        match last_milestone {
+            Some(milestone) => {
+                require!(!milestone.released, CrowdfundError::BadMilestone);
+            }
+            _ => {}
+        }
 
         // Transfer lamports to vault PDA
         anchor_lang::system_program::transfer(
@@ -163,8 +181,6 @@ pub mod crowdfunding {
         Ok(())
     }
     pub fn release(ctx: Context<Release>, index: u8) -> Result<()> {
-        // use anchor_lang::solana_program::{program::invoke_signed, system_instruction};
-
         let campaign = &mut ctx.accounts.campaign;
         let clock = Clock::get()?;
 
@@ -179,13 +195,25 @@ pub mod crowdfunding {
             CrowdfundError::TargetNotReached
         );
 
-        let amount = {
-            let milestone = &mut campaign.milestones[index as usize];
+        let amount: u64 = {
+            if index != 0 {
+                let previous_index = index - 1;
+                let previous_milestone = &campaign.milestones[previous_index as usize];
+                require!(
+                    previous_milestone.released,
+                    CrowdfundError::MilestoneNotReady
+                )
+            }
 
+            let milestone = &mut campaign.milestones[index as usize];
             require!(!milestone.released, CrowdfundError::AlreadyReleased);
 
             milestone.released = true;
-            milestone.amount
+            if milestone.is_last {
+                ctx.accounts.vault.lamports()
+            } else {
+                milestone.amount
+            }
         };
 
         if campaign.last_release_ts != 0 {
@@ -340,6 +368,7 @@ pub struct Milestone {
     pub description: String,
     pub release_ts: i64,
     pub released: bool,
+    pub is_last: bool,
 }
 
 #[derive(Accounts)]

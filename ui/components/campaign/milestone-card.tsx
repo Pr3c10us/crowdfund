@@ -38,8 +38,14 @@ import {
   createMilestoneReleaseTransaction,
   formatTimeRemaining,
   getTimeUntilRelease,
-  MilestoneStatus
+  MilestoneStatus,
+  getEffectiveMilestoneAmount
 } from '@/lib/solana/milestone-utils';
+import {
+  refreshMilestonesAfterRelease,
+  createMilestoneNotifications,
+  formatMilestoneChanges
+} from '@/lib/solana/milestone-refresh';
 import { convertLamportsToSol, getExplorerUrl } from '@/lib/solana/donation-utils';
 
 interface MilestoneCardProps {
@@ -47,6 +53,7 @@ interface MilestoneCardProps {
   milestoneIndex: number;
   campaign: CampaignData;
   onReleaseSuccess?: (signature: string, milestoneIndex: number) => void;
+  onMilestoneRefresh?: (refreshResult: any) => void;
   isCreator?: boolean;
   disputeWindowSeconds: number;
 }
@@ -62,6 +69,7 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
   milestoneIndex,
   campaign,
   onReleaseSuccess,
+  onMilestoneRefresh,
   isCreator = false,
   disputeWindowSeconds
 }) => {
@@ -102,7 +110,29 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
     campaign.lastReleaseTs,
     campaign.milestones
   );
-  const milestoneAmountSol = convertLamportsToSol(milestone.amount);
+
+  // Use effective amount for display (last milestone shows remaining donated amount)
+  const effectiveAmount = getEffectiveMilestoneAmount(
+    milestone,
+    milestoneIndex,
+    campaign.milestones,
+    campaign.totalDonated
+  );
+  const milestoneAmountSol = convertLamportsToSol(effectiveAmount);
+  const isLastMilestone = milestone.isLast;
+
+  // Debug logging for last milestone
+  useEffect(() => {
+    if (isLastMilestone) {
+      console.log('Last milestone debug:', {
+        milestoneIndex,
+        originalAmount: convertLamportsToSol(milestone.amount),
+        effectiveAmount: milestoneAmountSol,
+        totalDonated: convertLamportsToSol(campaign.totalDonated),
+        totalMilestones: campaign.milestones.length
+      });
+    }
+  }, [isLastMilestone, milestoneIndex, milestoneAmountSol, milestone.amount, campaign.totalDonated]);
 
   const getStatusIcon = (status: MilestoneStatus) => {
     switch (status) {
@@ -201,6 +231,52 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
         }
       });
 
+      // Trigger milestone refresh after successful release
+      try {
+        const refreshResult = await refreshMilestonesAfterRelease(
+          campaign,
+          milestoneIndex,
+          { disputeWindowSeconds }
+        );
+
+        // Log milestone changes
+        console.log('Milestone refresh result:', {
+          campaignId: refreshResult.campaignId,
+          changes: formatMilestoneChanges(refreshResult),
+          newlyAvailable: refreshResult.newlyAvailable,
+          nextAvailable: refreshResult.nextAvailableMilestone
+        });
+
+        // Create and show notifications for milestone status changes
+        const notifications = createMilestoneNotifications(refreshResult);
+        notifications.forEach(notification => {
+          switch (notification.type) {
+            case 'success':
+              toast.success(notification.message, {
+                description: notification.description
+              });
+              break;
+            case 'info':
+              toast.info(notification.message, {
+                description: notification.description
+              });
+              break;
+            case 'warning':
+              toast.warning(notification.message, {
+                description: notification.description
+              });
+              break;
+          }
+        });
+
+        // Notify parent component about the refresh
+        onMilestoneRefresh?.(refreshResult);
+
+      } catch (refreshError) {
+        console.error('Failed to refresh milestones:', refreshError);
+        // Don't show error toast for refresh failure as the main transaction succeeded
+      }
+
       onReleaseSuccess?.(signature, milestoneIndex);
 
       // Close dialog after success
@@ -282,7 +358,12 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
           {/* Milestone Description */}
           <div>
             <p className="text-sm text-muted-foreground leading-relaxed">
-              {milestone.description || `Milestone ${milestoneIndex + 1} - Release funds when campaign reaches target`}
+              {milestone.description ||
+                (isLastMilestone
+                  ? `Final milestone - Release remaining donated funds (${milestoneAmountSol.toFixed(2)} SOL)`
+                  : `Milestone ${milestoneIndex + 1} - Release funds when campaign reaches target`
+                )
+              }
             </p>
           </div>
 

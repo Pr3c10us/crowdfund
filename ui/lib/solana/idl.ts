@@ -1,5 +1,5 @@
 export const IDL = {
-  "address": "6jzv4ApJTAWKWu8puDgMpzwV2pMGLp1nvDUoYrpMUjVM",
+  "address": "21eoeoxSMhCR4vHwf7aAiZLCyVSHsmLrCZMPTBS7MM9U",
   "metadata": {
     "name": "crowdfunding",
     "version": "0.1.0",
@@ -691,46 +691,56 @@ export const IDL = {
     },
     {
       "code": 6004,
+      "name": "MilestoneComplete",
+      "msg": "All milestone have been completed"
+    },
+    {
+      "code": 6005,
       "name": "TargetNotReached",
       "msg": "Target not reached"
     },
     {
-      "code": 6005,
+      "code": 6006,
       "name": "NothingToRefund",
       "msg": "Nothing to refund"
     },
     {
-      "code": 6006,
+      "code": 6007,
       "name": "InvalidMilestone",
       "msg": "Invalid milestone index or already released"
     },
     {
-      "code": 6007,
+      "code": 6008,
       "name": "DisputeWindowOpen",
       "msg": "Dispute window is still open"
     },
     {
-      "code": 6008,
+      "code": 6009,
       "name": "AlreadyReleased",
       "msg": "Milestone already released"
     },
     {
-      "code": 6009,
+      "code": 6010,
+      "name": "MilestoneNotReady",
+      "msg": "previous milestone has not been realesed"
+    },
+    {
+      "code": 6011,
       "name": "UnAuthorized",
       "msg": "Unauthorized to release funds"
     },
     {
-      "code": 6010,
+      "code": 6012,
       "name": "CampaignLocked",
       "msg": "The funds in the campaign has been locked"
     },
     {
-      "code": 6011,
+      "code": 6013,
       "name": "ConfigNotInitialized",
       "msg": "System config not initialized"
     },
     {
-      "code": 6012,
+      "code": 6014,
       "name": "ConfigInitialized",
       "msg": "System config already initialized"
     }
@@ -774,7 +784,7 @@ export const IDL = {
                     "name": "Milestone"
                   }
                 },
-                5
+                3
               ]
             }
           },
@@ -888,6 +898,10 @@ export const IDL = {
           },
           {
             "name": "released",
+            "type": "bool"
+          },
+          {
+            "name": "is_last",
             "type": "bool"
           }
         ]

@@ -184,7 +184,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             </div>
             {showCreateButton && (
               <Button asChild>
-                <Link href="/campaigns/create">
+                <Link href="/create">
                   <Plus className="w-4 h-4 mr-2" />
                   Create Campaign
                 </Link>
@@ -385,7 +385,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
             </div>
             {showCreateButton && (
               <Button asChild>
-                <Link href="/campaigns/create">
+                <Link href="/create">
                   <Plus className="w-4 h-4 mr-2" />
                   Create First Campaign
                 </Link>

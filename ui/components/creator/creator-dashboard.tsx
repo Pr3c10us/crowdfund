@@ -69,7 +69,7 @@ export const CreatorDashboard: React.FC = () => {
       try {
         // For now, use mock data filtered by creator
         // In production, this would query the blockchain for campaigns created by this wallet
-        const creatorCampaigns = mockCampaigns.filter(campaign => 
+        const creatorCampaigns = mockCampaigns.filter(campaign =>
           campaign.creator.equals(publicKey)
         );
 
@@ -87,7 +87,7 @@ export const CreatorDashboard: React.FC = () => {
 
   const calculateStats = (campaigns: CampaignData[]) => {
     const currentTimestamp = Math.floor(Date.now() / 1000);
-    
+
     let totalRaised = 0;
     let totalReleased = 0;
     let availableToRelease = 0;
@@ -97,7 +97,7 @@ export const CreatorDashboard: React.FC = () => {
 
     campaigns.forEach(campaign => {
       totalRaised += convertLamportsToSol(campaign.totalDonated);
-      
+
       if (campaign.milestones && campaign.milestones.length > 0) {
         const milestones = campaign.milestones.slice(0, campaign.milestoneCount);
         totalMilestones += milestones.length;
@@ -124,7 +124,10 @@ export const CreatorDashboard: React.FC = () => {
               campaign.totalDonated,
               campaign.targetLamports,
               campaign.lastReleaseTs,
-              currentTimestamp
+              currentTimestamp,
+              7 * 24 * 60 * 60, // disputeWindowSeconds (7 days in seconds)
+              campaign.startTs, // campaignStartTimestamp (optional)
+              milestones // milestones array (optional)
             );
             if (status === 'available') {
               availableMilestones++;
@@ -149,7 +152,7 @@ export const CreatorDashboard: React.FC = () => {
   const handleMilestoneRelease = (signature: string, milestoneIndex: number) => {
     // Refresh campaigns after milestone release
     if (publicKey) {
-      const creatorCampaigns = mockCampaigns.filter(campaign => 
+      const creatorCampaigns = mockCampaigns.filter(campaign =>
         campaign.creator.equals(publicKey)
       );
       setCampaigns(creatorCampaigns);
@@ -210,7 +213,7 @@ export const CreatorDashboard: React.FC = () => {
           </p>
         </div>
         <Button asChild>
-          <Link href="/campaigns/create">
+          <Link href="/create">
             <Plus className="w-4 h-4 mr-2" />
             Create Campaign
           </Link>
@@ -297,7 +300,7 @@ export const CreatorDashboard: React.FC = () => {
                   Create your first campaign to start raising funds for your project.
                 </p>
                 <Button asChild>
-                  <Link href="/campaigns/create">
+                  <Link href="/create">
                     <Plus className="w-4 h-4 mr-2" />
                     Create Your First Campaign
                   </Link>
@@ -326,8 +329,8 @@ export const CreatorDashboard: React.FC = () => {
                         <div className="flex items-center space-x-2 ml-4">
                           <Badge variant={
                             campaign.status === 'active' ? 'default' :
-                            campaign.status === 'successful' ? 'default' :
-                            campaign.status === 'failed' ? 'destructive' : 'secondary'
+                              campaign.status === 'successful' ? 'default' :
+                                campaign.status === 'failed' ? 'destructive' : 'secondary'
                           }>
                             {campaign.status}
                           </Badge>
@@ -345,7 +348,7 @@ export const CreatorDashboard: React.FC = () => {
                           <span className="font-medium">{progress.toFixed(1)}%</span>
                         </div>
                         <Progress value={progress} className="h-2" />
-                        
+
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                           <div>
                             <div className="text-muted-foreground">Raised</div>
@@ -403,6 +406,7 @@ export const CreatorDashboard: React.FC = () => {
                       isCreator={true}
                       onMilestoneRelease={handleMilestoneRelease}
                       showCards={true}
+                      disputeWindowSeconds={7 * 24 * 60 * 60}
                     />
                   </CardContent>
                 </Card>
@@ -430,7 +434,7 @@ export const CreatorDashboard: React.FC = () => {
                     {stats.totalReleased.toFixed(2)} SOL
                   </div>
                 </div>
-                
+
                 <div className="p-4 bg-blue-50 dark:bg-blue-900/10 rounded-lg border border-blue-200">
                   <div className="text-sm text-blue-700 dark:text-blue-400 mb-1">
                     Available to Release
@@ -439,7 +443,7 @@ export const CreatorDashboard: React.FC = () => {
                     {stats.availableToRelease.toFixed(2)} SOL
                   </div>
                 </div>
-                
+
                 <div className="p-4 bg-gray-50 dark:bg-gray-900/10 rounded-lg border border-gray-200">
                   <div className="text-sm text-gray-700 dark:text-gray-400 mb-1">
                     Pending Release
