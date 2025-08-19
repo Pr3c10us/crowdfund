@@ -16,18 +16,18 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "SolFund - Decentralized Crowdfunding on Solana",
+  title: "solfundme - Decentralized Crowdfunding on Solana",
   description: "Launch and support crowdfunding campaigns on the Solana blockchain. Transparent, secure, and community-driven fundraising.",
   keywords: ["solana", "crowdfunding", "blockchain", "fundraising", "crypto", "web3"],
-  authors: [{ name: "SolFund Team" }],
+  authors: [{ name: "solfundme Team" }],
   openGraph: {
-    title: "SolFund - Decentralized Crowdfunding on Solana",
+    title: "solfundme - Decentralized Crowdfunding on Solana",
     description: "Launch and support crowdfunding campaigns on the Solana blockchain.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "SolFund - Decentralized Crowdfunding on Solana",
+    title: "solfundme - Decentralized Crowdfunding on Solana",
     description: "Launch and support crowdfunding campaigns on the Solana blockchain.",
   },
 };

@@ -19,7 +19,7 @@ export const Footer: React.FC = () => {
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
                 <Coins className="h-5 w-5" />
               </div>
-              <span className="text-xl font-bold">SolFund</span>
+              <span className="text-xl font-bold">solfundme</span>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">
               Decentralized crowdfunding platform built on Solana blockchain.
@@ -170,7 +170,7 @@ export const Footer: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
           <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-            <p>&copy; {currentYear} SolFund. All rights reserved.</p>
+            <p>&copy; {currentYear} solfundme. All rights reserved.</p>
             <span className="hidden sm:inline">•</span>
             <p className="hidden sm:inline">Built on Solana</p>
           </div>

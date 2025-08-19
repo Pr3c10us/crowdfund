@@ -70,7 +70,7 @@ export const Header: React.FC = () => {
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
             <Coins className="h-5 w-5" />
           </div>
-          <span className="text-xl font-bold">SolFund</span>
+          <span className="text-xl font-bold">solfundme</span>
         </Link>
 
         {/* Desktop Navigation */}
@@ -115,7 +115,7 @@ export const Header: React.FC = () => {
               <SheetHeader>
                 <SheetTitle className="flex items-center space-x-2">
                   <Coins className="h-5 w-5" />
-                  <span>SolFund</span>
+                  <span>solfundme</span>
                 </SheetTitle>
                 <SheetDescription>
                   Decentralized crowdfunding on Solana
