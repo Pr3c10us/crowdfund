@@ -545,13 +545,13 @@ export default function CampaignDetailPage() {
             </Card>
 
             {/* Admin Controls */}
-            <CampaignLockControl
+            {!allMilestonesReleased && <CampaignLockControl
               campaign={campaign}
               onLockStatusChange={(locked) => {
                 // Update campaign state to reflect lock status
                 setCampaign(prev => prev ? { ...prev, locked } as any : null);
               }}
-            />
+            />}
 
             {/* Campaign Stats */}
             <Card>

@@ -5,6 +5,7 @@ import { Program, BN } from '@coral-xyz/anchor';
 import { createProgram } from './program';
 import { Campaign, CampaignWithPubkey, DonationReceipt, DonationReceiptWithPubkey } from '../types';
 import { convertLamportsToSol } from './instructions';
+import { areAllMilestonesReleased } from './milestone-utils';
 
 export interface CampaignData extends Campaign {
   id: string;
@@ -54,14 +55,14 @@ export class CampaignDataService {
         console.warn('Program or account not available, using mock data');
         return mockCampaigns;
       }
-      
+
       // Try to access the campaign account with proper typing
       const campaigns = await (program.account as any).campaign?.all();
       if (!campaigns) {
         console.warn('Campaign account not found, using mock data');
         return mockCampaigns;
       }
-      
+
       return campaigns.map((campaign: any) => this.transformCampaignData(campaign));
     } catch (error) {
       console.error('Error fetching campaigns:', error);
@@ -78,14 +79,14 @@ export class CampaignDataService {
         console.warn('Program or account not available, using mock data');
         return mockCampaigns.find(c => c.id === campaignPubkey.toString()) || null;
       }
-      
+
       // Try to access the campaign account with proper typing
       const campaign = await (program.account as any).campaign?.fetch(campaignPubkey);
       if (!campaign) {
         console.warn('Campaign not found, using mock data');
         return mockCampaigns.find(c => c.id === campaignPubkey.toString()) || null;
       }
-      
+
       return this.transformCampaignData({
         publicKey: campaignPubkey,
         account: campaign
@@ -105,7 +106,7 @@ export class CampaignDataService {
         console.warn('Program or account not available, using mock data');
         return mockCampaigns.filter(c => c.creator.toString() === creator.toString());
       }
-      
+
       const campaigns = await (program.account as any).campaign?.all([
         {
           memcmp: {
@@ -114,12 +115,12 @@ export class CampaignDataService {
           }
         }
       ]);
-      
+
       if (!campaigns) {
         console.warn('Campaign account not found, using mock data');
         return mockCampaigns.filter(c => c.creator.toString() === creator.toString());
       }
-      
+
       return campaigns.map((campaign: any) => this.transformCampaignData(campaign));
     } catch (error) {
       console.error('Error fetching campaigns by creator:', error);
@@ -135,7 +136,7 @@ export class CampaignDataService {
         console.warn('Program or account not available, no donations available');
         return [];
       }
-      
+
       const receipts = await (program.account as any).donationReceipt?.all([
         {
           memcmp: {
@@ -144,7 +145,7 @@ export class CampaignDataService {
           }
         }
       ]);
-      
+
       return receipts || [];
     } catch (error) {
       console.error('Error fetching campaign donations:', error);
@@ -156,30 +157,32 @@ export class CampaignDataService {
   private transformCampaignData(campaignWithPubkey: CampaignWithPubkey): CampaignData {
     const { publicKey, account } = campaignWithPubkey;
     const campaign = account as any; // Use any to handle IDL type issues
-    
+
     // Use the new IDL structure with separate title, description, and imageUrl fields
     const title = campaign.title || 'Untitled Campaign';
     const shortDescription = campaign.description || 'No description available';
     const imageUrl = campaign.imageUrl || '';
-    
+
     // Calculate progress percentage
     const targetSol = convertLamportsToSol(campaign.targetLamports);
     const currentSol = convertLamportsToSol(campaign.totalDonated);
     const progress = targetSol > 0 ? Math.min((currentSol / targetSol) * 100, 100) : 0;
-    
+
     // Calculate time remaining
     const now = Math.floor(Date.now() / 1000);
     const endTime = campaign.endTs.toNumber();
     const timeRemaining = Math.max(0, endTime - now);
-    
+
     // Determine status
     let status: 'active' | 'ended' | 'successful' | 'failed' = 'active';
-    if (timeRemaining === 0) {
+    if (areAllMilestonesReleased(campaign.milestones)) {
+      status = 'successful';
+    } else if (timeRemaining === 0) {
       status = progress >= 100 ? 'successful' : 'failed';
     } else {
       status = 'active';
     }
-    
+
     return {
       ...campaign,
       id: publicKey.toBase58(),
@@ -211,7 +214,7 @@ export class CampaignDataService {
     // Apply search filter
     if (filters.search) {
       const searchTerm = filters.search.toLowerCase();
-      filtered = filtered.filter(campaign => 
+      filtered = filtered.filter(campaign =>
         campaign.title.toLowerCase().includes(searchTerm) ||
         campaign.shortDescription.toLowerCase().includes(searchTerm)
       );
@@ -247,11 +250,11 @@ export class CampaignDataService {
   // Format time remaining for display
   formatTimeRemaining(seconds: number): string {
     if (seconds <= 0) return 'Ended';
-    
+
     const days = Math.floor(seconds / (24 * 60 * 60));
     const hours = Math.floor((seconds % (24 * 60 * 60)) / (60 * 60));
     const minutes = Math.floor((seconds % (60 * 60)) / 60);
-    
+
     if (days > 0) {
       return `${days}d ${hours}h`;
     } else if (hours > 0) {
