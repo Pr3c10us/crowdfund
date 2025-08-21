@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { DurationInput } from '@/components/ui/duration-input';
 import {
   Plus,
   Trash2,
@@ -82,8 +83,8 @@ const campaignSchema = z.object({
   //   .max(10000, 'Target amount cannot exceed 10,000 SOL'),
   duration: z
     .number()
-    .min(1, 'Duration must be at least 1 day')
-    .max(365, 'Duration cannot exceed 365 days'),
+    .min(60, 'Duration must be at least 1 minute') // 1 minute in seconds
+    .max(31536000, 'Duration cannot exceed 365 days'), // 365 days in seconds
   milestones: z
     .array(milestoneSchema)
     .min(1, 'At least one milestone is required')
@@ -120,7 +121,7 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
       description: '',
       imageUrl: '',
       // targetAmount: 0.1,
-      duration: 30,
+      duration: 30 * 24 * 60 * 60, // 30 days in seconds
       milestones: [
         { amount: 0.05, description: 'Initial milestone to get started' },
       ],
@@ -142,7 +143,7 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
     if (watchedFields.title && watchedFields.title.length >= 5) completedFields++;
     if (watchedFields.description && watchedFields.description.length >= 5) completedFields++;
     // if (watchedFields.targetAmount && watchedFields.targetAmount >= 0.01) completedFields++;
-    if (watchedFields.duration && watchedFields.duration >= 1) completedFields++;
+    if (watchedFields.duration && watchedFields.duration >= 60) completedFields++; // At least 1 minute in seconds
 
     return Math.round((completedFields / totalFields) * 100);
   };
@@ -182,7 +183,7 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
       const campaignKeypair = Keypair.generate();
 
       // Convert form data to blockchain format
-      const durationSeconds = data.duration * 24 * 60 * 60; // Duration in seconds as number
+      const durationSeconds = data.duration; // Duration already in seconds from DurationInput
 
       // Validate milestone data
       const validMilestones = data.milestones.filter(m => m.amount > 0 && m.description.trim().length > 0);
@@ -395,50 +396,24 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* <FormField
-                  control={form.control}
-                  name="targetAmount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Target Amount (SOL)</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0.01"
-                          max="10000"
-                          placeholder="0.1"
-                          {...field}
-                          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                        />
-                      </FormControl>
-                      <FormDescription>
-                        Funding goal in SOL (1-10,000)
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                /> */}
-
+              <div className="flex gap-4">
                 <FormField
                   control={form.control}
                   name="duration"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Duration (Days)</FormLabel>
+                      <FormLabel>Campaign Duration</FormLabel>
                       <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="365"
-                          placeholder="30"
-                          {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                        <DurationInput
+                          value={field.value}
+                          onChange={field.onChange}
+                          minMinutes={1}
+                          maxDays={365}
+                          disabled={isSubmitting}
                         />
                       </FormControl>
                       <FormDescription>
-                        Campaign duration (1-365 days)
+                        Set your campaign duration with precise control over days, hours, and minutes
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
@@ -604,7 +579,21 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
               </div> */}
               <div>
                 <h3 className="font-semibold mb-2">Duration</h3>
-                <p className="text-muted-foreground">{watchedFields.duration} days</p>
+                <p className="text-muted-foreground">
+                  {watchedFields.duration ? 
+                    (() => {
+                      const days = Math.floor(watchedFields.duration / (24 * 60 * 60));
+                      const hours = Math.floor((watchedFields.duration % (24 * 60 * 60)) / (60 * 60));
+                      const minutes = Math.floor((watchedFields.duration % (60 * 60)) / 60);
+                      const parts = [];
+                      if (days > 0) parts.push(`${days} day${days !== 1 ? 's' : ''}`);
+                      if (hours > 0) parts.push(`${hours} hour${hours !== 1 ? 's' : ''}`);
+                      if (minutes > 0) parts.push(`${minutes} minute${minutes !== 1 ? 's' : ''}`);
+                      return parts.length > 0 ? parts.join(', ') : 'No duration set';
+                    })()
+                    : 'No duration set'
+                  }
+                </p>
               </div>
             </div>
 
@@ -654,7 +643,21 @@ export const CampaignCreateForm: React.FC<CampaignCreateFormProps> = ({
             </div> */}
             <div className="flex justify-between">
               <span>Duration:</span>
-              <span className="font-medium">{watchedFields.duration} days</span>
+              <span className="font-medium">
+                {watchedFields.duration ? 
+                  (() => {
+                    const days = Math.floor(watchedFields.duration / (24 * 60 * 60));
+                    const hours = Math.floor((watchedFields.duration % (24 * 60 * 60)) / (60 * 60));
+                    const minutes = Math.floor((watchedFields.duration % (60 * 60)) / 60);
+                    const parts = [];
+                    if (days > 0) parts.push(`${days}d`);
+                    if (hours > 0) parts.push(`${hours}h`);
+                    if (minutes > 0) parts.push(`${minutes}m`);
+                    return parts.length > 0 ? parts.join(' ') : 'No duration';
+                  })()
+                  : 'No duration'
+                }
+              </span>
             </div>
             <div className="flex justify-between">
               <span>Milestones:</span>

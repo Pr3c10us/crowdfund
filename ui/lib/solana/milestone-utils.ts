@@ -25,11 +25,11 @@ export const getMilestoneStatus = (
     return 'released';
   }
 
-  // Check if campaign has reached the milestone amount
-  const milestoneThreshold = campaignTargetAmount.mul(new BN(milestoneIndex + 1)).div(new BN(5)); // Assuming 5 milestones max
-  const hasReachedThreshold = campaignTotalDonated.gte(milestoneThreshold);
+  // Check if campaign has reached 100% funding (target amount)
+  const fundingPercentage = campaignTotalDonated.mul(new BN(100)).div(campaignTargetAmount);
+  const hasReached100Percent = fundingPercentage.gte(new BN(100));
 
-  if (!hasReachedThreshold) {
+  if (!hasReached100Percent) {
     return 'pending';
   }
 
@@ -194,7 +194,9 @@ export const validateMilestoneRelease = (
   currentTimestamp: number,
   disputeWindowSeconds: number,
   campaignStartTimestamp?: BN,
-  isLocked: boolean = false
+  isLocked: boolean = false,
+  campaignTotalDonated?: BN,
+  campaignTargetAmount?: BN
 ): {
   isValid: boolean;
   error?: string;
@@ -207,6 +209,20 @@ export const validateMilestoneRelease = (
   // Check if milestone is already released
   if (milestone.released) {
     return { isValid: false, error: 'Milestone already released' };
+  }
+
+  // Check if campaign has reached 100% funding
+  if (campaignTotalDonated && campaignTargetAmount) {
+    const fundingPercentage = campaignTotalDonated.mul(new BN(100)).div(campaignTargetAmount);
+    const hasReached100Percent = fundingPercentage.gte(new BN(100));
+    
+    if (!hasReached100Percent) {
+      const currentPercentage = fundingPercentage.toNumber();
+      return { 
+        isValid: false, 
+        error: `Campaign must reach 100% funding before milestone release (currently ${currentPercentage.toFixed(1)}%)` 
+      };
+    }
   }
 
   // Check if previous milestones are released (sequential release)

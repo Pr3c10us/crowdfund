@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { PublicKey } from '@solana/web3.js';
 import Image from 'next/image';
@@ -20,6 +20,8 @@ import { DonateDialog } from '@/components/campaign/donate-dialog';
 import { DonationReceipt } from '@/components/campaign/donation-receipt';
 import { MilestoneTimeline } from '@/components/campaign/milestone-timeline';
 import { CampaignLockControl } from '@/components/campaign/campaign-lock-control';
+import { RefundInterface } from '@/components/campaign/refund-interface';
+import { RefundStatus } from '@/components/campaign/refund-status';
 import { useDonations, DonationData } from '@/hooks/use-donations';
 import {
   Dialog,
@@ -78,7 +80,7 @@ import { CampaignData, getCampaignDataService, mockCampaigns } from '@/lib/solan
 import { convertLamportsToSol } from '@/lib/solana/instructions';
 import { createProgram } from '@/lib/solana/program';
 import { createInstructionBuilder, handleProgramError } from '@/lib/solana/instructions';
-import { DonateParams } from '@/lib/types';
+import { DonateParams, DonationReceiptWithPubkey } from '@/lib/types';
 import { BN } from '@coral-xyz/anchor';
 import { CampaignLoading } from '@/components/campaign/campaign-loading';
 import { getSystemConfig } from '@/lib/solana/admin-utils';
@@ -86,6 +88,7 @@ import { areAllMilestonesReleased } from '@/lib/solana/milestone-utils';
 
 export default function CampaignDetailPage() {
   const params = useParams();
+  const searchParams = useSearchParams();
   const campaignId = decodeURIComponent(params.id as string);
   const { connection } = useConnection();
   const { publicKey, signTransaction } = useWallet();
@@ -96,7 +99,39 @@ export default function CampaignDetailPage() {
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
   const [lastDonation, setLastDonation] = useState<DonationData | null>(null);
+  const [userDonations, setUserDonations] = useState<DonationReceiptWithPubkey[]>([]);
+  const [loadingDonations, setLoadingDonations] = useState(false);
+  const [activeTab, setActiveTab] = useState(() => {
+    const tab = searchParams.get('tab');
+    return tab === 'refunds' ? 'refunds' : tab === 'milestones' ? 'milestones' : 'story';
+  });
   const { handleDonationSuccess } = useDonations();
+
+  // Load user donations for the campaign
+  const loadUserDonations = async (campaignPubkey: PublicKey) => {
+    if (!publicKey) {
+      setUserDonations([]);
+      return;
+    }
+
+    setLoadingDonations(true);
+    try {
+      const campaignService = getCampaignDataService(connection);
+      const allDonations = await campaignService.fetchCampaignDonations(campaignPubkey);
+
+      // Filter donations for the current user
+      const userDonationsList = allDonations.filter(
+        donation => donation.account.donor.toString() === publicKey.toString()
+      );
+
+      setUserDonations(userDonationsList);
+    } catch (error) {
+      console.error('Error loading user donations:', error);
+      setUserDonations([]);
+    } finally {
+      setLoadingDonations(false);
+    }
+  };
 
   // Load campaign data
   useEffect(() => {
@@ -115,6 +150,15 @@ export default function CampaignDetailPage() {
         }
 
         setCampaign(foundCampaign || null);
+
+        // Load user donations if campaign found and wallet connected
+        if (foundCampaign && publicKey) {
+          try {
+            await loadUserDonations(new PublicKey(foundCampaign.id));
+          } catch (error) {
+            console.error('Error loading user donations:', error);
+          }
+        }
 
         const config = await getSystemConfig(connection, {
           publicKey,
@@ -142,7 +186,7 @@ export default function CampaignDetailPage() {
     };
 
     loadCampaign();
-  }, [campaignId, connection]);
+  }, [campaignId, connection, publicKey]);
 
   if (loading) {
     return <CampaignLoading variant="detail" />;
@@ -209,14 +253,33 @@ export default function CampaignDetailPage() {
     setShowReceiptDialog(true);
     handleDonationSuccess(signature, amount, campaign!);
 
-    // Refresh campaign data after successful donation
+    // Refresh campaign data and user donations after successful donation
     setTimeout(async () => {
       try {
         const campaignService = getCampaignDataService(connection);
         const updatedCampaign = await campaignService.fetchCampaign(new PublicKey(campaign!.id));
-        if (updatedCampaign) setCampaign(updatedCampaign);
+        if (updatedCampaign) {
+          setCampaign(updatedCampaign);
+          // Reload user donations
+          await loadUserDonations(new PublicKey(campaign!.id));
+        }
       } catch (error) {
         console.error('Failed to refresh campaign data:', error);
+      }
+    }, 2000);
+  };
+
+  const onRefundSuccess = (signature: string, amount: number) => {
+    toast.success(`Refund successful! ${amount.toFixed(4)} SOL refunded.`);
+
+    // Refresh user donations after successful refund
+    setTimeout(async () => {
+      try {
+        if (campaign) {
+          await loadUserDonations(new PublicKey(campaign.id));
+        }
+      } catch (error) {
+        console.error('Failed to refresh user donations after refund:', error);
       }
     }, 2000);
   };
@@ -391,10 +454,11 @@ export default function CampaignDetailPage() {
             </div>
 
             {/* Tabs Section */}
-            <Tabs defaultValue="story" className="w-full">
-              <TabsList className="grid w-full grid-cols-2">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="story">Story</TabsTrigger>
                 <TabsTrigger value="milestones">Milestones</TabsTrigger>
+                <TabsTrigger value="refunds">Refunds</TabsTrigger>
                 {/* <TabsTrigger value="updates">Updates</TabsTrigger> */}
               </TabsList>
 
@@ -480,6 +544,20 @@ export default function CampaignDetailPage() {
                 )}
               </TabsContent>
 
+              <TabsContent value="refunds" className="space-y-6">
+                <div className="grid gap-6">
+                  <RefundInterface
+                    campaign={campaign}
+                    userDonations={userDonations}
+                    onRefundSuccess={onRefundSuccess}
+                  />
+                  <RefundStatus
+                    campaign={campaign}
+                    userDonations={userDonations}
+                  />
+                </div>
+              </TabsContent>
+
               {/* <TabsContent value="updates">
                 <Card>
                   <CardContent className="p-6 text-center">
@@ -545,7 +623,7 @@ export default function CampaignDetailPage() {
             </Card>
 
             {/* Admin Controls */}
-            {!allMilestonesReleased && <CampaignLockControl
+            {(!allMilestonesReleased && !donationsDisabled) && <CampaignLockControl
               campaign={campaign}
               onLockStatusChange={(locked) => {
                 // Update campaign state to reflect lock status
@@ -622,7 +700,7 @@ export default function CampaignDetailPage() {
                   </div>
 
                   {/* Creator Stats */}
-                  <div className="bg-muted/50 rounded-lg p-3 space-y-2">
+                  {/* <div className="bg-muted/50 rounded-lg p-3 space-y-2">
                     <div className="flex justify-between text-sm">
                       <span className="text-muted-foreground">Campaigns Created</span>
                       <span className="font-medium">1</span>
@@ -637,10 +715,10 @@ export default function CampaignDetailPage() {
                         {campaign.status === 'successful' ? '100%' : 'In Progress'}
                       </span>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Trust Indicators */}
-                  <div className="space-y-2">
+                  {/* <div className="space-y-2">
                     <div className="flex items-center text-sm text-muted-foreground">
                       <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                       Verified Solana Address
@@ -649,7 +727,7 @@ export default function CampaignDetailPage() {
                       <CheckCircle className="mr-2 h-4 w-4 text-green-500" />
                       Smart Contract Verified
                     </div>
-                  </div>
+                  </div> */}
                 </div>
               </CardContent>
             </Card>

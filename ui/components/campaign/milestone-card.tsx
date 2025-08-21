@@ -99,7 +99,9 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
     currentTimestamp,
     disputeWindowSeconds,
     campaign.startTs,
-    (campaign as any).locked || false
+    (campaign as any).locked || false,
+    campaign.totalDonated,
+    campaign.targetLamports
   ) : { isValid: false, error: 'Wallet not connected' };
 
   const timeUntilRelease = getTimeUntilRelease(
@@ -323,9 +325,13 @@ export const MilestoneCard: React.FC<MilestoneCardProps> = ({
       );
     }
 
+    const fundingPercentage = campaign.totalDonated.mul(new BN(100)).div(campaign.targetLamports).toNumber();
+    const hasReached100Percent = fundingPercentage >= 100;
+    
     return (
       <Button variant="outline" disabled className="w-full">
-        {status === 'pending' && 'Funding Required'}
+        {status === 'pending' && !hasReached100Percent && `100% Funding Required (${fundingPercentage.toFixed(1)}%)`}
+        {status === 'pending' && hasReached100Percent && 'Previous Milestones Required'}
         {status === 'disputed' && 'Dispute Window Open'}
       </Button>
     );

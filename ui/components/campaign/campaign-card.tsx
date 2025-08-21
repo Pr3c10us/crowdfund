@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Calendar, Users, Target, Clock, TrendingUp, Heart } from 'lucide-react';
+import { Calendar, Users, Target, Clock, TrendingUp, Heart, RefreshCw } from 'lucide-react';
 import { CampaignData } from '@/lib/solana/campaign-data';
 import { convertLamportsToSol } from '@/lib/solana/instructions';
 import { DonateDialog } from './donate-dialog';
@@ -206,14 +206,23 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
               View Details
             </Link>
           </Button>
-          <Button
-            onClick={() => setShowDonateDialog(true)}
-            className="group-hover:bg-primary/90 transition-colors"
-            disabled={campaign.status !== 'active'}
-          >
-            <Heart className="w-4 h-4 mr-1" />
-            Donate
-          </Button>
+          {campaign.status === 'failed' ? (
+            <Button asChild variant="secondary" className="w-full">
+              <Link href={`/${campaign.id}?tab=refunds`}>
+                <RefreshCw className="w-4 h-4 mr-1" />
+                Check Refund
+              </Link>
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setShowDonateDialog(true)}
+              className="group-hover:bg-primary/90 transition-colors"
+              disabled={campaign.status !== 'active'}
+            >
+              <Heart className="w-4 h-4 mr-1" />
+              Donate
+            </Button>
+          )}
         </div>
       </CardFooter>
 
