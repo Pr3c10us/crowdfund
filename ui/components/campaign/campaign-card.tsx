@@ -19,12 +19,14 @@ interface CampaignCardProps {
   campaign: CampaignData;
   showCreator?: boolean;
   compact?: boolean;
+  onDataRefresh?: () => void;
 }
 
 export const CampaignCard: React.FC<CampaignCardProps> = ({
   campaign,
   showCreator = true,
-  compact = false
+  compact = false,
+  onDataRefresh
 }) => {
   const [showDonateDialog, setShowDonateDialog] = useState(false);
   const [showReceiptDialog, setShowReceiptDialog] = useState(false);
@@ -80,6 +82,13 @@ export const CampaignCard: React.FC<CampaignCardProps> = ({
     setLastDonation(donation);
     setShowReceiptDialog(true);
     handleDonationSuccess(signature, amount, campaign);
+    
+    // Refresh campaign data after successful donation
+    if (onDataRefresh) {
+      setTimeout(() => {
+        onDataRefresh();
+      }, 2000); // 2-second delay to allow blockchain state to update
+    }
   };
 
   return (

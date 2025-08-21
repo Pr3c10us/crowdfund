@@ -193,7 +193,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
           </div>
 
           {/* Stats Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {/* <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4">
                 <div className="flex items-center space-x-2">
@@ -238,7 +238,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div> */}
         </div>
       )}
 
@@ -404,6 +404,7 @@ export const CampaignList: React.FC<CampaignListProps> = ({
               campaign={campaign}
               compact={compact || viewMode === 'list'}
               showCreator={!compact}
+              onDataRefresh={handleRefresh}
             />
           ))}
         </div>
